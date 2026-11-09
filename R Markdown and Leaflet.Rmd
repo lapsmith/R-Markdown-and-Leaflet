@@ -1,0 +1,98 @@
+---
+title: "R Markdown and Leaflet"
+author: "Jaco Smith"
+date: "2026-11-09"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+library(leaflet)
+library(dplyr)
+```
+## Executive Summary
+
+This document presents an interactive geospatial dashboard generated using **R Markdown** and **Leaflet** on `r format(Sys.Date(), '%B %d, %Y')`. 
+
+The interactive map below highlights selected world landmarks, categorized by type, and features:
+- Dynamic popups with formatted HTML links and preview information
+- Custom OpenStreetMap tile providers
+- Clustered marker functionality for dense visual sets
+
+---
+
+## Interactive Map Showcase
+
+```{r leaflet-map}
+# 1. Define Landmark Dataset
+landmarks <- data.frame(
+  name = c("Eiffel Tower", "Statue of Liberty", "Sydney Opera House", "Colosseum", "Taj Mahal"),
+  lat = c(48.8584, 40.6892, -33.8568, 41.8902, 27.1751),
+  lng = c(2.2945, -74.0445, 151.2153, 12.4922, 78.0421),
+  city = c("Paris, France", "New York, USA", "Sydney, Australia", "Rome, Italy", "Agra, India"),
+  category = c("Monument", "Statue", "Arts Center", "Amphitheater", "Mausoleum"),
+  wiki_url = c(
+    "[https://en.wikipedia.org/wiki/Eiffel_Tower](https://en.wikipedia.org/wiki/Eiffel_Tower)",
+    "[https://en.wikipedia.org/wiki/Statue_of_Liberty](https://en.wikipedia.org/wiki/Statue_of_Liberty)",
+    "[https://en.wikipedia.org/wiki/Sydney_Opera_House](https://en.wikipedia.org/wiki/Sydney_Opera_House)",
+    "[https://en.wikipedia.org/wiki/Colosseum](https://en.wikipedia.org/wiki/Colosseum)",
+    "[https://en.wikipedia.org/wiki/Taj_Mahal](https://en.wikipedia.org/wiki/Taj_Mahal)"
+  )
+)
+
+# 2. Construct Popups with Custom HTML
+landmarks <- landmarks %>%
+  mutate(
+    popup_content = paste0(
+      "<div style='font-family: Arial, sans-serif; min-width: 160px;'>",
+      "<h4 style='margin-bottom: 4px; color: #2c3e50;'>", name, "</h4>",
+      "<b>City:</b> ", city, "<br>",
+      "<b>Category:</b> ", category, "<br><br>",
+      "<a href='", wiki_url, "' target='_blank' style='color: #3498db; text-decoration: none;'>Read on Wikipedia &rarr;</a>",
+      "</div>"
+    )
+  )
+
+# 3. Build Leaflet Map Pipeline
+leaflet(landmarks) %>%
+  # Base map tiles (Fully free, no key required)
+  addTiles(group = "OpenStreetMap") %>%
+  addProviderTiles(providers$Esri.WorldTopoMap, group = "Esri Topo") %>%
+  
+  # Set default view to focus globally
+  setView(lat = 20.0, lng = 10.0, zoom = 2) %>%
+  
+  # Add interactive markers with popups and clustering
+  addMarkers(
+    ~lng, ~lat,
+    popup = ~popup_content,
+    label = ~name,
+    clusterOptions = markerClusterOptions(),
+    group = "Landmarks"
+  ) %>%
+  
+  # Layer Control for toggling free map styles
+  addLayersControl(
+    baseGroups = c("OpenStreetMap", "Esri Topo"),
+    options = layersControlOptions(collapsed = FALSE)
+  ) %>%
+  
+  # Add visual map enhancements
+  addMiniMap(toggleDisplay = TRUE, position = "bottomleft") %>%
+  addScaleBar(position = "bottomright")
+```
+
+---
+
+## Data Summary Table
+
+The table below outlines the coordinates and metadata passed directly to the Leaflet widget:
+
+```{r data-table}
+knitr::kable(
+  landmarks %>% select(Name = name, City = city, Category = category, Latitude = lat, Longitude = lng),
+  caption = "Landmarks Location Metadata"
+)
+```
+
+---
